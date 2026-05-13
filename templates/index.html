@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Article Translation - AI Powered Translation Tool</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <div class="header-content">
+                <h1>📝 Article Translation</h1>
+                <p class="subtitle">Translate your articles with AI-powered context understanding</p>
+            </div>
+        </header>
+
+        <main class="main-content">
+            <!-- Loading Indicator -->
+            <div id="loadingIndicator" class="loading-indicator" style="display: none;">
+                <div class="spinner"></div>
+                <p>Processing your translation...</p>
+            </div>
+
+            <!-- Error Message -->
+            <div id="errorMessage" class="error-message" style="display: none;"></div>
+
+            <div class="form-section">
+                <form id="translationForm" enctype="multipart/form-data">
+                    <!-- Input Source Section -->
+                    <div class="form-group">
+                        <label for="articleInput"><strong>Step 1: Provide Article Text</strong></label>
+                        <p class="help-text">Enter your article text below or upload a file</p>
+                        
+                        <div class="input-options">
+                            <div class="option">
+                                <textarea id="articleInput" name="articleInput" 
+                                    placeholder="Paste your article text here..." 
+                                    rows="8"></textarea>
+                            </div>
+                            <div class="divider">OR</div>
+                            <div class="option">
+                                <label for="fileInput" class="file-upload-label">
+                                    <span class="upload-icon">📤</span>
+                                    <span>Upload File (TXT, PDF)</span>
+                                </label>
+                                <input type="file" id="fileInput" name="fileInput" 
+                                    accept=".txt,.pdf" onchange="handleFileUpload(event)">
+                                <p id="fileName" class="file-name"></p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Language Selection -->
+                    <div class="form-group">
+                        <label for="targetLanguage"><strong>Step 2: Select Target Language</strong></label>
+                        <select id="targetLanguage" name="targetLanguage" required>
+                            <option value="">-- Choose Language --</option>
+                            <option value="Spanish">Spanish (Español)</option>
+                            <option value="French">French (Français)</option>
+                            <option value="German">German (Deutsch)</option>
+                            <option value="Chinese">Chinese (中文)</option>
+                            <option value="Japanese">Japanese (日本語)</option>
+                            <option value="Hindi">Hindi (हिंदी)</option>
+                            <option value="Portuguese">Portuguese (Português)</option>
+                            <option value="Russian">Russian (Русский)</option>
+                            <option value="Italian">Italian (Italiano)</option>
+                            <option value="Arabic">Arabic (العربية)</option>
+                            <option value="Dutch">Dutch (Nederlands)</option>
+                            <option value="Korean">Korean (한국어)</option>
+                        </select>
+                    </div>
+
+                    <!-- Expected Output (Optional) -->
+                    <div class="form-group">
+                        <label for="expectedOutput"><strong>Step 3: (Optional) Upload Expected Output</strong></label>
+                        <p class="help-text">Upload the expected translation to calculate accuracy</p>
+                        <div class="input-options">
+                            <div class="option">
+                                <textarea id="expectedOutput" name="expectedOutput" 
+                                    placeholder="Paste expected translated text here..." 
+                                    rows="6"></textarea>
+                            </div>
+                            <div class="divider">OR</div>
+                            <div class="option">
+                                <label for="expectedFile" class="file-upload-label">
+                                    <span class="upload-icon">📤</span>
+                                    <span>Upload Expected Output File</span>
+                                </label>
+                                <input type="file" id="expectedFile" name="expectedFile" 
+                                    accept=".txt,.pdf" onchange="handleExpectedFileUpload(event)">
+                                <p id="expectedFileName" class="file-name"></p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Translate Button -->
+                    <div class="form-group">
+                        <button type="submit" id="translateBtn" class="btn btn-primary">
+                            🚀 Translate Article
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Results Section -->
+            <div id="resultsSection" class="results-section" style="display: none;">
+                <div class="results-header">
+                    <h2>Translation Results</h2>
+                    <button type="button" class="btn btn-secondary" onclick="resetForm()">← Back to Form</button>
+                </div>
+
+                <!-- Metrics Dashboard -->
+                <div class="metrics-section">
+                    <div class="metric-card">
+                        <div class="metric-icon">🔢</div>
+                        <div class="metric-content">
+                            <p class="metric-label">Tokens Used</p>
+                            <p id="tokensUsed" class="metric-value">0</p>
+                        </div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-icon">✅</div>
+                        <div class="metric-content">
+                            <p class="metric-label">Accuracy</p>
+                            <p id="accuracyScore" class="metric-value">N/A</p>
+                        </div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-icon">⏱️</div>
+                        <div class="metric-content">
+                            <p class="metric-label">Processing Time</p>
+                            <p id="processingTime" class="metric-value">--</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Output Comparison -->
+                <div class="output-section">
+                    <div class="output-card">
+                        <div class="output-header">
+                            <h3>Original Text</h3>
+                            <button type="button" class="copy-btn" onclick="copyToClipboard('originalText')">📋 Copy</button>
+                        </div>
+                        <div id="originalText" class="output-content"></div>
+                    </div>
+
+                    <div class="output-card">
+                        <div class="output-header">
+                            <h3>AI Translation</h3>
+                            <button type="button" class="copy-btn" onclick="copyToClipboard('translatedText')">📋 Copy</button>
+                        </div>
+                        <div id="translatedText" class="output-content"></div>
+                    </div>
+
+                    <div id="expectedOutputCard" class="output-card" style="display: none;">
+                        <div class="output-header">
+                            <h3>Expected Translation</h3>
+                        </div>
+                        <div id="expectedOutputText" class="output-content"></div>
+                    </div>
+
+                    <!-- Comparison Section -->
+                    <div id="comparisonSection" class="output-card" style="display: none;">
+                        <div class="output-header">
+                            <h3>Detailed Comparison</h3>
+                        </div>
+                        <div id="comparisonDetails" class="output-content"></div>
+                    </div>
+                </div>
+
+        </main>
+    </div>
+
+    <script>
+        const form = document.getElementById('translationForm');
+        const resultsSection = document.getElementById('resultsSection');
+        const loadingIndicator = document.getElementById('loadingIndicator');
+        const errorMessage = document.getElementById('errorMessage');
+
+        // Handle file upload
+        function handleFileUpload(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    if (file.type === 'text/plain') {
+                        document.getElementById('articleInput').value = e.target.result;
+                    } else if (file.type === 'application/pdf') {
+                        // For PDF, we'll send the file directly via FormData
+                        document.getElementById('fileName').textContent = '✓ ' + file.name + ' (will be processed)';
+                    }
+                };
+                if (file.type === 'text/plain') {
+                    reader.readAsText(file);
+                }
+                document.getElementById('fileName').textContent = '✓ ' + file.name;
+            }
+        }
+
+        function handleExpectedFileUpload(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    if (file.type === 'text/plain') {
+                        document.getElementById('expectedOutput').value = e.target.result;
+                    }
+                };
+                if (file.type === 'text/plain') {
+                    reader.readAsText(file);
+                }
+                document.getElementById('expectedFileName').textContent = '✓ ' + file.name;
+            }
+        }
+
+        // Handle form submission
+        form.addEventListener('submit', async function(e) {
+            e.preventDefault();
+
+            const articleInput = document.getElementById('articleInput').value.trim();
+            const targetLanguage = document.getElementById('targetLanguage').value;
+            const expectedOutput = document.getElementById('expectedOutput').value.trim();
+            const fileInput = document.getElementById('fileInput').files[0];
+
+            if (!targetLanguage) {
+                showError('Please select a target language');
+                return;
+            }
+
+            if (!articleInput && !fileInput) {
+                showError('Please provide article text or upload a file');
+                return;
+            }
+
+            // Show loading indicator
+            loadingIndicator.style.display = 'flex';
+            errorMessage.style.display = 'none';
+            resultsSection.style.display = 'none';
+
+            try {
+                const formData = new FormData();
+                
+                if (articleInput) {
+                    formData.append('text', articleInput);
+                }
+                if (fileInput) {
+                    formData.append('file', fileInput);
+                }
+                formData.append('targetLanguage', targetLanguage);
+                if (expectedOutput) {
+                    formData.append('expectedOutput', expectedOutput);
+                }
+
+                const startTime = Date.now();
+
+                const response = await fetch('/api/translate', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const endTime = Date.now();
+                const processingTime = ((endTime - startTime) / 1000).toFixed(2);
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.error || 'Translation failed');
+                }
+
+                const result = await response.json();
+
+                // Update metrics
+                document.getElementById('tokensUsed').textContent = result.tokens_used || 0;
+                document.getElementById('processingTime').textContent = processingTime + 's';
+
+                // Display original text
+                document.getElementById('originalText').textContent = result.original_text;
+
+                // Display translated text
+                document.getElementById('translatedText').textContent = result.translated_text;
+
+                // Handle accuracy if available
+                if (result.accuracy !== null && result.accuracy !== undefined) {
+                    const accuracyPercent = (result.accuracy * 100).toFixed(2);
+                    document.getElementById('accuracyScore').textContent = accuracyPercent + '%';
+                    
+                    // Show expected output and comparison
+                    document.getElementById('expectedOutputCard').style.display = 'block';
+                    document.getElementById('expectedOutputText').textContent = result.expected_output;
+                    
+                    // Show detailed comparison
+                    document.getElementById('comparisonSection').style.display = 'block';
+                    displayComparison(result);
+                } else {
+                    document.getElementById('accuracyScore').textContent = 'N/A';
+                    document.getElementById('expectedOutputCard').style.display = 'none';
+                    document.getElementById('comparisonSection').style.display = 'none';
+                }
+
+                // Show results
+                loadingIndicator.style.display = 'none';
+                resultsSection.style.display = 'block';
+                document.querySelector('.form-section').style.display = 'none';
+
+            } catch (error) {
+                loadingIndicator.style.display = 'none';
+                showError(error.message);
+            }
+        });
+
+        function showError(message) {
+            errorMessage.textContent = '❌ Error: ' + message;
+            errorMessage.style.display = 'block';
+        }
+
+        function resetForm() {
+            form.reset();
+            document.getElementById('fileName').textContent = '';
+            document.getElementById('expectedFileName').textContent = '';
+            resultsSection.style.display = 'none';
+            document.querySelector('.form-section').style.display = 'block';
+            errorMessage.style.display = 'none';
+        }
+
+        function copyToClipboard(elementId) {
+            const text = document.getElementById(elementId).textContent;
+            navigator.clipboard.writeText(text).then(() => {
+                alert('Copied to clipboard!');
+            });
+        }
+
+        function displayComparison(result) {
+            const comparisonDiv = document.getElementById('comparisonDetails');
+            const similarity = (result.accuracy * 100).toFixed(2);
+            
+            comparisonDiv.innerHTML = `
+                <div class="comparison-item">
+                    <p><strong>Similarity Score:</strong> ${similarity}%</p>
+                    <p><strong>Evaluation Method:</strong> Semantic Similarity (BLEU-like scoring)</p>
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: ${similarity}%"></div>
+                    </div>
+                </div>
+            `;
+        }
+    </script>
+</body>
+</html>
